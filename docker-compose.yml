@@ -1,0 +1,11 @@
+services:
+  worker:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      API_KEY: ${API_KEY:-dev-secret-change-me}
+      MAX_UPLOAD_MB: "200"
+      PORT: "8080"
+      # Optional: wall-clock limit per ffmpeg invocation (seconds)
+      # MAX_PROCESS_SECONDS: "300"
