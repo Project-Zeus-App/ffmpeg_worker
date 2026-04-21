@@ -92,7 +92,7 @@ async def request_context(request: Request, call_next):
 
 @app.middleware("http")
 async def enforce_max_body(request: Request, call_next):
-    if request.method != "POST" or request.url.path != "/process":
+    if request.method != "POST" or request.url.path not in {"/process", "/"}:
         return await call_next(request)
     max_mb = int(os.environ.get("MAX_UPLOAD_MB", "200"))
     max_bytes = max(0, max_mb) * 1024 * 1024
@@ -158,8 +158,7 @@ def health():
     return {"ok": True}
 
 
-@app.post("/process")
-async def process(
+async def _handle_process_request(
     request: Request,
     _: Annotated[None, Depends(require_api_key)],
     targetSeconds: Annotated[str | None, Form()] = None,
@@ -273,3 +272,45 @@ async def process(
         )
     finally:
         shutil.rmtree(work_in, ignore_errors=True)
+
+
+@app.post("/process")
+async def process(
+    request: Request,
+    _: Annotated[None, Depends(require_api_key)],
+    targetSeconds: Annotated[str | None, Form()] = None,
+    clip1: Annotated[UploadFile | None, File()] = None,
+    clip2: Annotated[UploadFile | None, File()] = None,
+    hasScene2: Annotated[str | None, Form()] = None,
+):
+    return await _handle_process_request(
+        request=request,
+        _=_,
+        targetSeconds=targetSeconds,
+        clip1=clip1,
+        clip2=clip2,
+        hasScene2=hasScene2,
+    )
+
+
+@app.post("/")
+async def process_root_alias(
+    request: Request,
+    _: Annotated[None, Depends(require_api_key)],
+    targetSeconds: Annotated[str | None, Form()] = None,
+    clip1: Annotated[UploadFile | None, File()] = None,
+    clip2: Annotated[UploadFile | None, File()] = None,
+    hasScene2: Annotated[str | None, Form()] = None,
+):
+    log.info(
+        "root_process_alias_used",
+        extra=log_extra(request_id=getattr(request.state, "request_id", None)),
+    )
+    return await _handle_process_request(
+        request=request,
+        _=_,
+        targetSeconds=targetSeconds,
+        clip1=clip1,
+        clip2=clip2,
+        hasScene2=hasScene2,
+    )

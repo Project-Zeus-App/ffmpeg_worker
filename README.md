@@ -58,12 +58,12 @@ curl -s http://localhost:8080/health
 
 Replace `YOUR_API_KEY`, paths, and host as needed.
 
-### One clip
+### One clip (`POST /`)
 
 ```bash
 ffmpeg -y -f lavfi -i testsrc=duration=8:size=640x360:rate=30 -pix_fmt yuv420p /tmp/clip1.mp4
 
-curl -sS -X POST "http://localhost:8080/process" \
+curl -sS -X POST "http://localhost:8080/" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Expect:" \
   -F "targetSeconds=10" \
@@ -74,7 +74,7 @@ curl -sS -X POST "http://localhost:8080/process" \
 unzip -l /tmp/out.zip
 ```
 
-### Two clips
+### Two clips (`POST /process`)
 
 ```bash
 ffmpeg -y -f lavfi -i testsrc=duration=3:size=640x360:rate=30 -pix_fmt yuv420p /tmp/a.mp4
@@ -110,6 +110,9 @@ curl -sS -o /dev/null -w "%{http_code}" http://localhost:8080/process -X POST -F
 
 Use **POST** with **multipart/form-data**:
 
+- **Production endpoint for n8n:** `POST /` (root alias).
+- **Also supported:** `POST /process` (legacy/explicit path; same behavior).
+
 | Field | Type | Value |
 |-------|------|--------|
 | `targetSeconds` | Text | e.g. `15` |
@@ -119,6 +122,13 @@ Use **POST** with **multipart/form-data**:
 **Authentication:** Add header **`Authorization`** = `Bearer <API_KEY>` or **`X-API-Key`** = your key.
 
 Optional `hasScene2` may be sent for UI logic; this service uses **whether `clip2` binary is attached**, not that flag.
+
+### n8n HTTP Request node tips
+
+- Set **Body Content Type** to `Form-Data`.
+- Map `clip1` and `clip2` as **binary** fields, not text.
+- Increase request timeout to cover FFmpeg runtime (for example `120-300s`, based on your clip sizes).
+- Enable retries for transient network/platform errors (for example 2-3 retries with backoff), but avoid high retry counts for large uploads.
 
 ## Deployment on Render (Web Service)
 
